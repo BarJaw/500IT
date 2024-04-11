@@ -1,83 +1,26 @@
 from utils import *
-from server import start_server
 import socket
 import threading
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
 
-def load_private_key(path):
-    with open(path, "rb") as key_file:
-        private_key = serialization.load_pem_private_key(
-            key_file.read(),
-            password=None,
-        )
-    return private_key
 
-
-def load_public_key(path):
-    with open(path, "rb") as key_file:
-        public_key = serialization.load_pem_public_key(
-            key_file.read(),
-        )
-    return public_key
-
-
-def rsa_encrypt(public_key, message):
-    """
-    Encrypts a plain text message using the public RSA key.
-
-    Parameters:
-    - public_key: RSAPublicKey object (already loaded from PEM).
-    - message: The plain text message as string.
-
-    Returns:
-    - The encrypted message as bytes.
-    """
-    encrypted = public_key.encrypt(
-        message.encode(),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return encrypted
-
-def rsa_decrypt(private_key, encrypted_message):
-    """
-    Decrypts an encrypted message using the private RSA key.
-
-    Parameters:
-    - private_key: RSAPrivateKey object (already loaded from PEM).
-    - encrypted_message: The encrypted data as bytes.
-
-    Returns:
-    - The decrypted message as a string.
-    """
-    original_message = private_key.decrypt(
-        encrypted_message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return original_message.decode()
-
-
-def receive_message(private_key_pem, sock):
+def receive_message(hmac_key, private_key_pem, sock):
     while True:
         try:
             data = sock.recv(4096)
             if not data:
                 break
-            data = rsa_decrypt(private_key_pem, data)
-            print("Received:", data)
+            message, hmac = data[:-64], data[-64:]
+            message = rsa_decrypt(private_key_pem, message)
+            is_hmac_correct = verify_hmac(hmac_key, message, hmac)
+            if is_hmac_correct:
+                print("Received:", message)
+            else:
+                print(red_text('Hmac is incorrect!!! The integrity is in danger.'))
         except Exception as e:
-            print(blue_text("You have been disconnected from the server."))
+            print(e)
             break
+            
     
 def start_client(email):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -88,23 +31,25 @@ def start_client(email):
     try:
         private_key_pem = load_private_key(f'{email}_personal_storage/{email}_private_key.pem')
         public_key_pem = load_public_key(f'public_keys/{other_email}_public_key.pem')
+        hmac_key = load_hmac_key(f'{email}_personal_storage/super_secret_hmac_key')
     except Exception as e:
         print(red_text('Your encryption setup is missing. Please ensure the keys are in the correct locations.'))
         exit()
-    threading.Thread(target=receive_message, args=(private_key_pem, client_socket,)).start()
+    threading.Thread(target=receive_message, args=(hmac_key, private_key_pem, client_socket,)).start()
     
     while True:
         message = input()
         if message == 'quit':
             break
+        hmac = generate_hmac(hmac_key, message).encode()
         message = rsa_encrypt(public_key_pem, message)
-        
-        client_socket.sendall(message)
+        data_to_send = message + hmac
+        client_socket.sendall(data_to_send)
     client_socket.close()
 
 def main():
     while True:
-        print("Welcome! Please choose an option:")
+        print(blue_text("Welcome! Please choose an option:"))
         print("1. Login to the chat")
         print("2. Register")
         print("3. Exit")
