@@ -78,16 +78,16 @@ def receive_message(private_key_pem, sock):
         except Exception as e:
             print(blue_text("You have been disconnected from the server."))
             break
-
+    
 def start_client(email):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     host = socket.gethostname()
     port = 9999
     client_socket.connect((host, port))
-    print(green_text(f'Connected to the server as {email}. You can start sending messages.'))
+    other_email = input(blue_text(f'Connected to the server as {email}. What is the email of the person you want to contact? '))
     try:
         private_key_pem = load_private_key(f'{email}_personal_storage/{email}_private_key.pem')
-        public_key_pem = load_public_key(f'public_keys/{email}_public_key.pem')
+        public_key_pem = load_public_key(f'public_keys/{other_email}_public_key.pem')
     except Exception as e:
         print(red_text('Your encryption setup is missing. Please ensure the keys are in the correct locations.'))
         exit()
@@ -100,7 +100,6 @@ def start_client(email):
         message = rsa_encrypt(public_key_pem, message)
         
         client_socket.sendall(message)
-
     client_socket.close()
 
 def main():
@@ -126,5 +125,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # start_client('user2@example.com')
     main()

@@ -76,4 +76,5 @@ def authenticate_user(conn, email, password_attempt):
 
 
 if __name__ == '__main__':
-    create_db()
+    pass
+    # create_db()
