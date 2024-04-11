@@ -1,3 +1,4 @@
+from utils import *
 import socket
 import threading
 from cryptography.hazmat.primitives import serialization
@@ -5,7 +6,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
 
-def load_private_key(path: str):
+def load_private_key(path):
     with open(path, "rb") as key_file:
         private_key = serialization.load_pem_private_key(
             key_file.read(),
@@ -14,7 +15,7 @@ def load_private_key(path: str):
     return private_key
 
 
-def load_public_key(path: str):
+def load_public_key(path):
     with open(path, "rb") as key_file:
         public_key = serialization.load_pem_public_key(
             key_file.read(),
@@ -54,7 +55,6 @@ def rsa_decrypt(private_key, encrypted_message):
     Returns:
     - The decrypted message as a string.
     """
-    # Assuming private_key is an RSAPrivateKey object, not PEM bytes
     original_message = private_key.decrypt(
         encrypted_message,
         padding.OAEP(
@@ -66,37 +66,35 @@ def rsa_decrypt(private_key, encrypted_message):
     return original_message.decode()
 
 
-
-
-def receive_message(public_key_pem, sock):
+def receive_message(private_key_pem, sock):
     while True:
         try:
             data = sock.recv(4096)
             if not data:
                 break
-            data = rsa_decrypt(public_key_pem, data)
+            data = rsa_decrypt(private_key_pem, data)
             print("Received:", data)
         except Exception as e:
-            print(e)
-            print("You have been disconnected from the server.")
+            print(blue_text("You have been disconnected from the server."))
             break
 
-def start_client():
+def start_client(email):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     host = socket.gethostname()
     port = 9999
-
     client_socket.connect((host, port))
-    print("Connected to the server. You can start sending messages.")
-    
-    private_key_pem = load_private_key('client_private_key.pem')
-    public_key_pem = load_public_key('client_public_key.pem')
-    
+    print(green_text(f'Connected to the server as {email}. You can start sending messages.'))
+    try:
+        private_key_pem = load_private_key(f'{email}_personal_storage/{email}_private_key.pem')
+        public_key_pem = load_public_key(f'public_keys/{email}_public_key.pem')
+    except Exception as e:
+        print(red_text('Your encryption setup is missing. Please ensure the keys are in the correct locations.'))
+        exit()
     threading.Thread(target=receive_message, args=(private_key_pem, client_socket,)).start()
     
     while True:
         message = input()
-        if message == "quit":
+        if message == 'quit':
             break
         message = rsa_encrypt(public_key_pem, message)
         
@@ -105,4 +103,6 @@ def start_client():
     client_socket.close()
 
 if __name__ == '__main__':
-    start_client()
+    # start_client()
+    # current_email = login()
+    start_client('user1@example.com')

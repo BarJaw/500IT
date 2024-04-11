@@ -1,5 +1,6 @@
 import socket
 import threading
+from utils import green_text, blue_text, red_text
 
 def client_thread(conn, other_conn):
     while True:
@@ -25,14 +26,16 @@ def start_server():
     print(f"Server started on {host}:{port}. Waiting for two clients to connect.")
 
     conn1, addr1 = server_socket.accept()
-    print(f"First client connected: {addr1}")
+    print(green_text(f"First client connected: {addr1}"))
 
     conn2, addr2 = server_socket.accept()
-    print(f"Second client connected: {addr2}")
+    print(green_text(f"Second client connected: {addr2}"))
 
     # Start a new thread to handle communication for each client
     threading.Thread(target=client_thread, args=(conn1, conn2)).start()
     threading.Thread(target=client_thread, args=(conn2, conn1)).start()
 
 if __name__ == '__main__':
-    start_server()
+    while True:
+        start_server()
+        print('Both clients disconnected.')
