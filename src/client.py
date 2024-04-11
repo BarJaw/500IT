@@ -12,11 +12,14 @@ def receive_message(hmac_key, private_key_pem, sock):
                 break
             message, hmac = data[:-64], data[-64:]
             message = rsa_decrypt(private_key_pem, message)
-            is_hmac_correct = verify_hmac(hmac_key, message, hmac)
+            if hmac_key is not None:
+                is_hmac_correct = verify_hmac(hmac_key, message, hmac)
+            else:
+                is_hmac_correct = False
             if is_hmac_correct:
                 print("Received:", message)
             else:
-                print(red_text('Hmac is incorrect!!! The integrity is in danger.'))
+                print(red_text('Hmac is incorrect or missing key! The integrity is in danger.'))
         except Exception as e:
             print(e)
             break
@@ -31,7 +34,7 @@ def start_client(email):
     try:
         private_key_pem = load_private_key(f'{email}_personal_storage/{email}_private_key.pem')
         public_key_pem = load_public_key(f'public_keys/{other_email}_public_key.pem')
-        hmac_key = load_hmac_key(f'{email}_personal_storage/super_secret_hmac_key')
+        hmac_key = load_hmac_key(f'{email}_personal_storage/super_secret_hmac_key.hmac')
     except Exception as e:
         print(red_text('Your encryption setup is missing. Please ensure the keys are in the correct locations.'))
         exit()
