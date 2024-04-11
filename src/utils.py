@@ -2,7 +2,7 @@ import db
 import os
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from bcrypt import hashpw, gensalt
+from bcrypt import hashpw, gensalt, checkpw
 
 
 def red_text(text: str) -> str:
@@ -55,21 +55,20 @@ def register():
     generate_keys(email)
 
     if db.register_user(db.conn, email, password_hash):
-        print("Registration successful!")
+        print(green_text("Registration successful!"))
     else:
-        print("Registration failed. The email might be already in use.")
+        print(red_text("Registration failed. The email might be already in use."))
 
 
 def login():
     email = input("Enter your email: ")
     password = input("Enter your password: ")
-    password_hash = hash_password(password)
-
-    if db.authenticate_user(db.conn, email, password_hash):
+    if db.authenticate_user(db.conn, email, password):
         print(green_text("Login successful!"))
+        return email
     else:
         print(red_text("Login failed. Check your credentials."))
 
-    return email
+    
 # generate_keys('user1@example.com')
 # generate_keys('user2@example.com')

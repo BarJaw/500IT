@@ -1,4 +1,5 @@
 from utils import *
+from server import start_server
 import socket
 import threading
 from cryptography.hazmat.primitives import serialization
@@ -102,7 +103,28 @@ def start_client(email):
 
     client_socket.close()
 
+def main():
+    while True:
+        print("Welcome! Please choose an option:")
+        print("1. Login to the chat")
+        print("2. Register")
+        print("3. Exit")
+        
+        choice = input("Enter your choice (1-3): ")
+        
+        if choice == '1':
+            email = login()
+            if email:
+                start_client(email)
+        elif choice == '2':
+            register()
+        elif choice == '3':
+            print(blue_text("Exiting program."))
+            break
+        else:
+            print("Invalid choice. Please enter 1, 2, or 3.")
+
+
 if __name__ == '__main__':
-    # start_client()
-    # current_email = login()
-    start_client('user1@example.com')
+    # start_client('user2@example.com')
+    main()

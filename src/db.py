@@ -1,6 +1,6 @@
-from utils import *
 import os
 import sqlite3
+from bcrypt import checkpw
 
 # Create the db directory if it doesn't exist
 db_directory = 'db/'
@@ -15,7 +15,7 @@ DB_PATH = os.path.join(db_directory, 'chat.db')
 conn = sqlite3.connect(DB_PATH)
 
 
-def create_users_table():
+def create_db():
     # Create a cursor object using the connection
     cursor = conn.cursor()
 
@@ -48,17 +48,32 @@ def register_user(conn, email, password_hash):
         print("Failed to register user:", e)
         return False
 
-
-def authenticate_user(conn, email, password_hash):
-    """Authenticate a user based on email and password hash."""
+def authenticate_user(conn, email, password_attempt):
+    """Authenticate a user based on email and attempted password."""
     cursor = conn.cursor()
+    
+    # Get the hashed password from the database for the given email
     cursor.execute(
-        "SELECT * FROM users WHERE email = ? AND password_hash = ?",
-        (email, password_hash)
+        "SELECT password_hash FROM users WHERE email = ?",
+        (email,)
     )
-    user = cursor.fetchone()
-    return user is not None
+    user_record = cursor.fetchone()
+    
+    if user_record:
+        # Extract the password hash from the first column of the user record
+        stored_hash = user_record[0]
+        
+        # Verify the password attempt against the stored hash
+        if checkpw(password_attempt.encode(), stored_hash):
+            print("Authentication successful.")
+            return True
+        else:
+            print("Authentication failed: Incorrect password.")
+            return False
+    else:
+        print("Authentication failed: No user found with that email.")
+        return False
 
 
 if __name__ == '__main__':
-    create_users_table()
+    create_db()
